@@ -19,6 +19,7 @@ from ..traits_extension import isdefined
 from ..base import (CommandLineInputSpec, CommandLine, traits, TraitedSpec,
                     File)
 from .base import MRTrix3BaseInputSpec, MRTrix3Base
+from ...utils.filemanip import split_filename
 
 
 class ResponseSDInputSpec(MRTrix3BaseInputSpec):
@@ -199,3 +200,76 @@ mrtrix3_labelconfig.txt aparc+first.mif'
         outputs = self.output_spec().get()
         outputs['out_file'] = op.abspath(self.inputs.out_file)
         return outputs
+
+
+class ThresholdInputSpec(CommandLineInputSpec):
+    in_file = File(exists=True, argstr='%s', mandatory=True, position=-2,
+                   desc='The input image to be thresholded')
+    out_filename = File(genfile=True, argstr='%s', position=-1,
+                        desc='The output binary image mask.')
+    absolute_threshold_value = traits.Float(
+        argstr='-abs %s',
+        desc='Specify threshold value as absolute intensity.')
+    percentage_threshold_value = traits.Float(
+        argstr='-percentile %s',
+        desc='Specify threshold value as a percentile of the peak intensity '
+             'in the input image.')
+    invert = traits.Bool(
+        argstr='-invert', position=1, desc="Invert output binary mask")
+    replace_zeros_with_NaN = traits.Bool(
+        argstr='-nan', position=1, desc="Replace all zero values with NaN")
+    ignorezero = traits.Bool(argstr='-ignorezero', position=1,
+                             desc="ignore zero-valued input voxels")
+    mask = File(exists=True, argstr='-mask %s', position=1,
+                desc='compute the optimal threshold based on voxels '
+                     'within a mask.')
+    quiet = traits.Bool(argstr='-quiet', position=1,
+                        desc="Do not display information messages or progress status.")
+    debug = traits.Bool(argstr='-debug', position=1,
+                        desc="Display debugging messages.")
+
+
+class ThresholdOutputSpec(TraitedSpec):
+    out_file = File(exists=True, desc='The output binary image mask.')
+
+
+class Threshold(CommandLine):
+    """
+    Create bitwise image by thresholding image intensity.
+
+    By default, the threshold level is determined using a histogram analysis
+    to cut out the background. Otherwise, the threshold intensity can be
+    specified using command line options.
+    Note that only the first study is used for thresholding.
+
+    Example
+    -------
+
+    >>> import nipype.interfaces.mrtrix3 as mrt
+    >>> thresh = mrt.Threshold()
+    >>> thresh.inputs.in_file = 'wm_mask.mif'
+    >>> thresh.run()                                             # doctest: +SKIP
+    """
+
+    _cmd = 'mrthreshold'
+    input_spec = ThresholdInputSpec
+    output_spec = ThresholdOutputSpec
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+        outputs['out_file'] = self.inputs.out_filename
+        if not isdefined(outputs['out_file']):
+            outputs['out_file'] = op.abspath(self._gen_outfilename())
+        else:
+            outputs['out_file'] = op.abspath(outputs['out_file'])
+        return outputs
+
+    def _gen_filename(self, name):
+        if name == 'out_filename':
+            return self._gen_outfilename()
+        else:
+            return None
+
+    def _gen_outfilename(self):
+        _, name, _ = split_filename(self.inputs.in_file)
+        return name + '_thresh.mif'
