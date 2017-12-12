@@ -36,7 +36,7 @@ class DeconvolveInputSpec(AFNICommandInputSpec):
         argstr='-input %s',
         copyfile=False,
         sep=" ",
-        position=0)
+        position=1)
     sat = traits.Bool(
         desc='check the dataset time series for initial saturation transients,'
              ' which should normally have been excised before data analysis.',
@@ -57,10 +57,11 @@ class DeconvolveInputSpec(AFNICommandInputSpec):
              '* If the auto-catenation feature isn\'t used, then this option '
              'has no effect, no how, no way.',
         argstr='-noblock')
-    force_TR = traits.Int(
+    force_TR = traits.Float(
         desc='use this value instead of the TR in the \'input\' '
              'dataset. (It\'s better to fix the input using Refit.)',
-        argstr='-force_TR %d')
+        argstr='-force_TR %f',
+        position=0)
     input1D = File(
         desc='filename of single (fMRI) .1D time series where time runs down '
              'the column.',
@@ -147,7 +148,7 @@ class DeconvolveInputSpec(AFNICommandInputSpec):
         desc='this option lets you input a rectangular array of 1 or more '
              'baseline vectors from a file. This method is a fast way to '
              'include a lot of baseline regressors in one step. ',
-        argstr='ortvec %s')
+        argstr='-ortvec %s %s')
     x1D = File(
         desc='specify name for saved X matrix',
         argstr='-x1D %s')
@@ -232,7 +233,7 @@ class DeconvolveInputSpec(AFNICommandInputSpec):
 
 class DeconvolveOutputSpec(TraitedSpec):
     out_file = File(
-        desc='output statistics file', exists=True)
+        desc='output statistics file', exists=False)
     reml_script = File(
         desc='automatical generated script to run 3dREMLfit', exists=True)
     x1D = File(
